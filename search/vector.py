@@ -84,9 +84,17 @@ def get_euclidean_dictance(vector1, vector2):
 def get_sqeuclidean_dictance(vector1, vector2):
     return sqeuclidean(vector1, vector2)
 
+
 if __name__ == "__main__":
-    ala = get_standard_vector([(1L, [4]), (2L, [26]), (3L, [0, 23])])
-    kota = get_standard_vector([(1L, [5]), (2L, [5]), (3L, [5])])
-    ma = get_standard_vector([(1L, [5]), (2L, [5]), (3L, [5])])
-    vectors = [ala, ma, kota]
-    print get_standard_vectors_union(vectors)
+    #ala = get_standard_vector([(1L, [4]), (2L, [26]), (3L, [0, 23])])
+    #kota = get_standard_vector([(1L, [5]), (2L, [5]), (3L, [5])])
+    #ma = get_standard_vector([(1L, [5]), (2L, [5]), (3L, [5])])
+    #vectors = [ala, ma, kota]
+    #print get_standard_vectors_union(vectors)
+    vectors = [[1.0,1.0,0.0],[1.0,0.0,0.0],[1.0,1.0,1.0],[0.0,0.0,1.0],[0.0,1.0,1.0],[0.0,0.0,1.0]]
+    for y in vectors:
+        values = []
+        for x in vectors:
+            values.append(round(get_cosine_dictance(y,x),4))
+        print values
+

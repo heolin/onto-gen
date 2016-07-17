@@ -12,14 +12,21 @@ from graph import graph, tree
 from ontology import ontology
 from lang import lemmatize
 from test import test
+from random import random
+from word2vec_wrapper import get_word2vec_similarity
 
 TERM_VECTORS_PATH = "temp/_temp_term.vect"
 DISTANCE_PATH = "temp/_temp_{}.dist"
 
 COSINE_DISTANCE_PATH = DISTANCE_PATH.format("cosine_distance")
+CITYBLOCK_DISTANCE_PATH = DISTANCE_PATH.format("cityblock_distance")
+CORRELATION_DISTANCE_PATH = DISTANCE_PATH.format("correlation_distance")
+CANBERRA_DISTANCE_PATH = DISTANCE_PATH.format("canberra_dictance")
+EUCLIDEAN_DISTANCE_PATH = DISTANCE_PATH.format("euclidean_dictance")
+BRAYCURTIS_DISTANCE_PATH = DISTANCE_PATH.format("braycurtis_dictance")
 LSI_DISTANCE_PATH = DISTANCE_PATH.format("lsi_distance")
+W2V_DISTANCE_PATH = DISTANCE_PATH.format("w2v_distance")
 
-#przeniesc ontology do graph, a osobno zrobic ontology gdzie elementy sa drzewem skierowanym a nie grafem
 def message(*arguments):
     sys.stderr.write("[ONTOLOGY GENERATOR]: " +' '.join(map(str, arguments)) + '\n')
 
@@ -61,6 +68,7 @@ def read_distances_map(path):
     for line in [l.split('\t') for l in open(path).read().split('\n')[:-1]]:
         result.setdefault(line[0], {})
         result[line[0]][line[1]] = float(line[2])
+        result[line[0]][line[1]] = float(line[2])
     return result
 
 
@@ -76,6 +84,7 @@ def save_term_vectors(term_vectors):
     for key in term_vectors:
         output_file.write(key+"\t")
         output_file.write("\t".join([str(x) for x in term_vectors[key]]))
+        output_file.write("\n")
     output_file.close()
 
 
@@ -93,8 +102,17 @@ def add_distances(ontology_graph, search_engine, topics):
     """Adding distances to connections."""
 
     distances_map = {}
-    distances_map["cosine_distance"] = read_distances_map(COSINE_DISTANCE_PATH)
-    distances_map["lsi_distance"] = read_distances_map(LSI_DISTANCE_PATH)
+    #Currently using this bad solution.
+    #If you want to use different distance functions, uncomment those you want.
+    #Reasult will be taken as average of all of them.
+    #distances_map["cosine_distance"] = read_distances_map(COSINE_DISTANCE_PATH)
+    #distances_map["cityblock_distance"] = read_distances_map(CITYBLOCK_DISTANCE_PATH)
+    #distances_map["correlation_distance"] = read_distances_map(CORRELATION_DISTANCE_PATH)
+    #distances_map["canberra_dictance"] = read_distances_map(CANBERRA_DISTANCE_PATH)
+    #distances_map["euclidean_dictance"] = read_distances_map(EUCLIDEAN_DISTANCE_PATH)
+    #distances_map["braycurtis_dictance"] = read_distances_map(BRAYCURTIS_DISTANCE_PATH)
+    #distances_map["lsi_distance"] = read_distances_map(LSI_DISTANCE_PATH)
+    distances_map["w2v_distance"] = read_distances_map(W2V_DISTANCE_PATH)
 
     print "[LOG]: Creating term vector started."
     terms = ontology_graph.terms.values()
@@ -119,22 +137,32 @@ def add_distance(ontology_graph, term1, term2, term_vectors, topics, distances_m
     vector1 = term_vectors[term1.term]
     vector2 = term_vectors[term2.term]
 
-    cosine_distance = None
-    lsi_distance = None
-    if term1.term in distances_map["cosine_distance"]:
-        if term2.term in distances_map["cosine_distance"][term1.term]:
-            cosine_distance = distances_map["cosine_distance"][term1.term][term2.term]
-            lsi_distance = distances_map["lsi_distance"][term1.term][term2.term]
+    distances = {}
+    for distance in distances_map:
+        if term1.term in distances_map[distance]:
+            if term2.term in distances_map[distance][term1.term]:
+                distances[distance] = distances_map[distance][term1.term][term2.term]
+        if distance not in distances:
+            if distance == "cosine_distance":
+                distances[distance] = vector.get_cosine_dictance(vector1, vector2)
+            if distance == "cityblock_distance":
+                distances[distance] = vector.get_cityblock_dictance(vector1, vector2)
+            if distance == "correlation_distance":
+                distances[distance] = vector.get_correlation_dictance(vector1, vector2)
+            if distance == "canberra_dictance":
+                distances[distance] = vector.get_canberra_dictance(vector1, vector2)
+            if distance == "euclidean_dictance":
+                distances[distance] = vector.get_euclidean_dictance(vector1, vector2)
+            if distance == "braycurtis_dictance":
+                distances[distance] = vector.get_braycurtis_dictance(vector1, vector2)
+            if distance == "lsi_distance":
+                distances[distance] = 1 - topics.get_similarity(term1.term, term2.term)
+            if distance == "w2v_distance":
+                distances[distance] = get_word2vec_similarity(term1.term, term2.term)
+            save_distance(term1.term, term2.term, distance, distances[distance])
 
-    if not cosine_distance:
-        cosine_distance = vector.get_cosine_dictance(vector1, vector2)
-        lsi_distance = 1 - topics.get_similarity(term1.term, term2.term)
-
-        save_distance(term1.term, term2.term, "cosine_distance", cosine_distance)
-        #save_distance(term1.term, term2.term, "lsi_distance", lsi_distance)
-
-    ontology_graph.add_distance(term1, term2, "cosine_distance", cosine_distance)
-    ontology_graph.add_distance(term1, term2, 'lsi', lsi_distance)
+    for distance in distances:
+        ontology_graph.add_distance(term1, term2, distance, distances[distance])
 
 
 
@@ -187,8 +215,7 @@ def main():
     input_parser.add_argument('-c', '--corpus',  help="Path to corpus directory.", required=True)
     input_parser.add_argument('-t', '--terms',  help="Path to file with terms.", required=True)
     input_parser.add_argument('-o', '--out',  help="Path to output_file.")
-    input_parser.add_argument('-d', '--debug',  help="Path to log file.")
-    input_parser.add_argument('-l', '--lemma',  help="Lemmatize terms.")
+    input_parser.add_argument('-l', '--lemma', action="store_true", help="Lemmatize terms.")
     input_parser.add_argument('-g', '--input_graph',  help="Path to log file.")
 
     args = input_parser.parse_args()

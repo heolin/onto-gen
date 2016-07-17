@@ -10,19 +10,20 @@ def convertToTree(connections, initial_graph):
     graph = initial_graph
     treeStep(connections, graph)
     graph.root = find_root(graph)
-    update_nodes(graph)
+    update_nodes(graph, graph.root, [graph.root])
     return graph
 
 
-def update_nodes(graph):
-    for conn in graph.connections:
-        if conn.first.term not in graph.terms:
-            graph.terms[conn.first.term] = conn.first
-        if conn.second.term not in graph.terms:
-            graph.terms[conn.second.term] = conn.second
+def update_nodes(graph, term1, checked):
+    for term2 in graph.connections_dict[term1]:
+        if term2 in checked:
+            continue
+        checked.append(term2)
+        graph.terms[term2].parent = (graph.terms[term1], graph.connections_dict[term1][term2])
+        graph.terms[term1].add_child(graph.terms[term2], graph.connections_dict[term1][term2])
+        update_nodes(graph, term2, checked)
 
-        conn.first.children.append(conn.second)
-        conn.second.parent = conn.first
+
 
 
 def treeStep(connections, graph):

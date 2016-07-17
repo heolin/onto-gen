@@ -16,8 +16,16 @@ class Connection(object):
 
     def get_distance(self):
         #return self.distances['cosine_distance']
-        return sum(self.distances.values())
+        return average(self.distances.values())
 
     def __str__(self):
         dist = ["{}:{}".format(k, v) for k, v in self.distances.items()]
         return "{} -> {}, [{}]".format(self.first, self.second, ", ".join(dist))
+
+
+def average(values):
+    if len(values) == 0:
+        return 0.0
+    return sum(values) / float(len(values))
+
+
